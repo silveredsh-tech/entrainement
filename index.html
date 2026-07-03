@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Suivi des séances</title>
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Séances">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon.svg">
+<style>
+  :root{
+    --noir:#0a0a0a;--noir-2:#161616;--noir-3:#1f1f1f;
+    --rouge:#e10600;--rouge-fonce:#9c0400;
+    --blanc:#f5f5f5;--gris:#8a8a8a;--bord:#2a2a2a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--noir);color:var(--blanc);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.4;padding:0 0 110px;-webkit-font-smoothing:antialiased;
+  }
+  header{
+    background:linear-gradient(135deg,#000 0%,#1a0000 100%);
+    border-bottom:3px solid var(--rouge);padding:24px 20px 20px;
+  }
+  header h1{font-size:21px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:11px;}
+  header h1 .accent{color:var(--rouge);}
+  header h1 .logo{width:30px;height:30px;color:var(--rouge);flex:0 0 auto;}
+  .global-progress{margin-top:14px;height:8px;background:var(--noir-3);border-radius:99px;overflow:hidden;}
+  .global-progress span{display:block;height:100%;width:0;background:var(--rouge);transition:width .3s;}
+  .progress-label{font-size:12px;color:var(--gris);margin-top:6px;}
+
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 0;}
+  .section-title{
+    font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--rouge);margin:6px 4px 14px;display:flex;align-items:center;gap:10px;
+  }
+  .section-title::after{content:"";flex:1;height:1px;background:var(--bord);}
+
+  /* ---- Calendrier 12 semaines ---- */
+  .cal{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:34px;}
+  @media(min-width:560px){.cal{grid-template-columns:repeat(3,1fr);}}
+  .week{
+    background:var(--noir-2);border:1px solid var(--bord);border-radius:12px;
+    padding:12px 12px 14px;transition:border-color .2s;
+  }
+  .week.full{border-color:var(--rouge);background:linear-gradient(160deg,#1a0202,var(--noir-2));}
+  .week-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .week-head .wnum{font-size:13px;font-weight:800;letter-spacing:.5px;}
+  .week-head .wdone{font-size:10px;color:var(--gris);font-weight:700;}
+  .week.full .wdone{color:var(--rouge);}
+  .pills{display:flex;gap:5px;}
+  .pill{
+    flex:1;height:38px;border:2px solid #3a3a3a;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:13px;color:var(--gris);cursor:pointer;
+    transition:all .15s;user-select:none;
+  }
+  .pill:hover{border-color:var(--gris);}
+  .pill.on{background:var(--rouge);border-color:var(--rouge);color:#fff;}
+
+  /* ---- Séances en carrousel ---- */
+  .session{margin-bottom:28px;}
+  .session-head{
+    display:flex;align-items:center;gap:14px;padding:14px 16px;
+    background:linear-gradient(90deg,var(--noir-3),transparent);
+    border:1px solid var(--bord);border-left:5px solid var(--rouge);
+    border-radius:14px 14px 0 0;border-bottom:none;
+  }
+  .session-tag{background:var(--rouge);color:#fff;font-weight:800;font-size:13px;padding:5px 11px;border-radius:6px;letter-spacing:1px;min-width:42px;text-align:center;}
+  .session-title{flex:1;}
+  .session-title h2{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+  .session-title small{color:var(--gris);font-size:12px;}
+  .session-count{font-size:11px;color:var(--gris);font-weight:700;letter-spacing:.5px;}
+
+  .carousel{
+    display:flex;gap:12px;overflow-x:auto;
+    padding:14px;background:var(--noir-2);
+    border:1px solid var(--bord);border-radius:0 0 14px 14px;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;scrollbar-color:var(--rouge) var(--noir-3);
+  }
+  .carousel::-webkit-scrollbar{height:6px;}
+  .carousel::-webkit-scrollbar-track{background:var(--noir-3);border-radius:99px;}
+  .carousel::-webkit-scrollbar-thumb{background:var(--rouge-fonce);border-radius:99px;}
+
+  .exo-card{
+    flex:0 0 240px;scroll-snap-align:start;
+    background:var(--noir-3);border:1px solid var(--bord);border-radius:12px;
+    padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px;
+    min-height:190px;
+  }
+  @media(min-width:560px){.exo-card{flex-basis:260px;}}
+  .exo-num{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--gris);}
+  .exo-num b{color:var(--rouge);}
+  .name-row{display:flex;align-items:flex-start;gap:8px;}
+  .exo-card .name{font-weight:600;font-size:14px;line-height:1.35;flex:1;}
+  .edit-btn{
+    flex:0 0 auto;background:none;border:none;cursor:pointer;
+    color:var(--gris);font-size:13px;padding:2px 4px;line-height:1;
+    border-radius:5px;transition:color .15s;
+  }
+  .edit-btn:hover{color:var(--rouge);}
+  .name-input{
+    flex:1;background:#141414;border:1px solid var(--rouge);border-radius:6px;
+    color:var(--blanc);font-family:inherit;font-size:14px;font-weight:600;
+    padding:5px 8px;width:100%;
+  }
+  .name-input:focus{outline:none;}
+  .exo-card .sets{color:var(--rouge);font-size:13px;font-weight:700;}
+  .sets-row{display:flex;align-items:center;gap:8px;}
+  .sets-row .sets{flex:1;}
+  .sets-input{
+    flex:1;background:#141414;border:1px solid var(--rouge);border-radius:6px;
+    color:var(--rouge);font-family:inherit;font-size:13px;font-weight:700;
+    padding:4px 8px;width:100%;
+  }
+  .sets-input:focus{outline:none;}
+  .cardio-tag{display:inline-block;background:var(--rouge-fonce);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:1px;margin-left:6px;vertical-align:middle;}
+  .note{
+    margin-top:auto;background:#141414;border:1px solid var(--bord);border-radius:8px;
+    color:var(--blanc);font-family:inherit;font-size:13px;padding:8px 10px;
+    width:100%;resize:vertical;min-height:56px;
+  }
+  .note::placeholder{color:#555;}
+  .note:focus{outline:none;border-color:var(--rouge);}
+
+  .toolbar{max-width:760px;margin:0 auto 8px;padding:0 16px;display:flex;gap:10px;}
+  .btn{flex:1;padding:11px;border-radius:10px;font-weight:700;font-size:12px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border:1px solid var(--bord);background:var(--noir-2);color:var(--blanc);transition:all .15s;}
+  .btn:hover{border-color:var(--rouge);}
+  .btn.reset{color:var(--rouge);}
+  footer{text-align:center;color:#444;font-size:11px;margin-top:30px;}
+
+  /* ---- Minuteur flottant ---- */
+  .timer{
+    position:fixed;right:16px;bottom:16px;z-index:50;
+    display:flex;align-items:center;gap:8px;
+  }
+  .timer-btn{
+    width:96px;height:96px;border-radius:50%;border:none;cursor:pointer;
+    background:conic-gradient(var(--rouge) calc(var(--p,0)*1%), var(--noir-3) 0);
+    padding:6px;box-shadow:0 6px 18px rgba(0,0,0,.6);
+    transition:transform .1s;user-select:none;-webkit-tap-highlight-color:transparent;
+  }
+  .timer-btn:active{transform:scale(.95);}
+  .timer-inner{
+    width:100%;height:100%;border-radius:50%;
+    background:var(--noir-2);border:1px solid var(--bord);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--blanc);
+  }
+  .timer-inner .t-val{font-size:24px;font-weight:800;letter-spacing:.5px;}
+  .timer-inner .t-lab{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--gris);text-transform:uppercase;margin-top:2px;}
+  .timer.running .timer-inner{border-color:var(--rouge);}
+  .timer.running .t-val{color:var(--rouge);}
+  .timer.done .timer-btn{animation:flash .5s ease-in-out 4;}
+  @keyframes flash{50%{box-shadow:0 0 0 10px rgba(225,6,0,.35);}}
+  .timer-stop{
+    width:40px;height:40px;border-radius:50%;border:1px solid var(--bord);
+    background:var(--noir-2);color:var(--gris);font-size:16px;font-weight:700;
+    cursor:pointer;display:none;box-shadow:0 4px 12px rgba(0,0,0,.5);
+  }
+  .timer-stop:hover{color:var(--rouge);border-color:var(--rouge);}
+  .timer.running .timer-stop{display:block;}
+</style>
+</head>
+<body>
+<header>
+  <h1>
+    <svg class="logo" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 9v6M2 10.5v3M20 9v6M22 10.5v3M6.5 8v8M17.5 8v8M6.5 12h11"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Suivi des <span class="accent">séances</span>
+  </h1>
+  <div class="global-progress"><span id="gbar"></span></div>
+  <div class="progress-label" id="glabel">0 / 48 séances réalisées</div>
+</header>
+
+<div class="wrap">
+  <div class="section-title">Calendrier · 12 semaines</div>
+  <div class="cal" id="cal"></div>
+</div>
+
+<div class="toolbar">
+  <button class="btn reset" onclick="resetCal()">Réinitialiser le calendrier</button>
+</div>
+
+<div class="wrap">
+  <div class="section-title">Détail des séances &amp; notes</div>
+  <div id="app"></div>
+</div>
+
+<footer>Données enregistrées localement sur cet appareil.</footer>
+
+<!-- Minuteur flottant -->
+<div class="timer" id="timer">
+  <button class="timer-stop" id="timerStop" title="Arrêter le minuteur">✕</button>
+  <button class="timer-btn" id="timerBtn" title="Minuteur de repos 90 s">
+    <span class="timer-inner">
+      <span class="t-val" id="timerVal">90s</span>
+      <span class="t-lab" id="timerLab">Repos</span>
+    </span>
+  </button>
+</div>
+
+<script>
+const WEEKS=12;
+const SESS=["A","B","C","D"];
+
+const program=[
+  {tag:"A",title:"Pecs / Épaules / Triceps",day:"Séance 1",exos:[
+    {n:"Développé couché décliné (machine)",s:"4 × 8-10"},
+    {n:"Développé assis (machine)",s:"4 × 8-10"},
+    {n:"Dips",s:"3 × 10-12"},
+    {n:"Élévations frontales",s:"3 × 12-15"},
+    {n:"Élévations latérales",s:"3 × 12-15"},
+    {n:"Abdos / gainage",s:"3 × 30-45 s"},
+  ]},
+  {tag:"B",title:"Dos / Biceps",day:"Séance 2",exos:[
+    {n:"Tirage horizontal",s:"4 × 10-12"},
+    {n:"Tirage vertical (machine)",s:"4 × 10-12"},
+    {n:"Tirage vertical poulie, barre horizontale",s:"3 × 10-12"},
+    {n:"Curl barre (alterné avec curl marteau 1 séance / 2)",s:"3 × 10-12"},
+    {n:"Superman au sol (gainage bas du dos)",s:"3 × 12-15"},
+    {n:"Planche",s:"3 × 30-45 s"},
+  ]},
+  {tag:"C",title:"Jambes",day:"Séance 3",exos:[
+    {n:"Goblet squat",s:"4 × 10-12"},
+    {n:"Squat sumo (faible charge)",s:"3 × 12-15"},
+    {n:"Fentes marchées haltères",s:"3 × 10 / jambe"},
+    {n:"Prowler / Sledge push",s:"6-8 allers · 30-40 m",cardio:true},
+  ]},
+];
+
+let state=JSON.parse(localStorage.getItem('prog_state_v3')||'null');
+if(!state){
+  // Migration : on récupère uniquement le calendrier de l'ancienne version,
+  // les notes/noms/séries pointaient sur d'anciens exercices → repart à zéro.
+  const old=JSON.parse(localStorage.getItem('prog_state_v2')||'{}');
+  state={cal:old.cal||{}};
+}
+state.cal=state.cal||{};
+state.notes=state.notes||{};
+state.names=state.names||{};
+state.sets=state.sets||{};
+function save(){localStorage.setItem('prog_state_v3',JSON.stringify(state));}
+
+/* ---------- Calendrier ---------- */
+const cal=document.getElementById('cal');
+for(let w=1;w<=WEEKS;w++){
+  const card=document.createElement('div');
+  card.className='week';card.id='w'+w;
+  const pills=SESS.map(s=>{
+    const k=w+'_'+s;
+    return `<div class="pill ${state.cal[k]?'on':''}" data-w="${w}" data-s="${s}">${s}</div>`;
+  }).join('');
+  card.innerHTML=`
+    <div class="week-head">
+      <span class="wnum">Semaine ${w}</span>
+      <span class="wdone" id="wd${w}">0/4</span>
+    </div>
+    <div class="pills">${pills}</div>`;
+  cal.appendChild(card);
+}
+document.querySelectorAll('.pill').forEach(p=>{
+  p.addEventListener('click',()=>{
+    const k=p.dataset.w+'_'+p.dataset.s;
+    state.cal[k]=!state.cal[k];
+    p.classList.toggle('on',state.cal[k]);
+    save();refreshCal();
+  });
+});
+function weekCount(w){return SESS.filter(s=>state.cal[w+'_'+s]).length;}
+function refreshCal(){
+  let done=0;
+  for(let w=1;w<=WEEKS;w++){
+    const c=weekCount(w);done+=c;
+    document.getElementById('wd'+w).textContent=c+'/4';
+    document.getElementById('w'+w).classList.toggle('full',c===4);
+  }
+  const total=WEEKS*4;
+  document.getElementById('gbar').style.width=Math.round(done/total*100)+'%';
+  document.getElementById('glabel').textContent=`${done} / ${total} séances réalisées`;
+}
+function resetCal(){
+  if(!confirm("Décocher toutes les séances du calendrier ? (les notes sont conservées)"))return;
+  state.cal={};
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+  save();refreshCal();
+}
+
+/* ---------- Séances en carrousel + notes ---------- */
+const app=document.getElementById('app');
+program.forEach((sess,si)=>{
+  const card=document.createElement('div');
+  card.className='session';
+  let html=`<div class="session-head">
+      <div class="session-tag">${sess.tag}</div>
+      <div class="session-title"><h2>${sess.title}</h2><small>${sess.day}</small></div>
+      <div class="session-count">${sess.exos.length} exos</div>
+    </div><div class="carousel">`;
+  sess.exos.forEach((ex,ei)=>{
+    const k=si+'_'+ei;
+    const displayName=state.names[k]||ex.n;
+    const displaySets=state.sets[k]||ex.s;
+    html+=`<div class="exo-card">
+        <div class="exo-num"><b>${ei+1}</b> / ${sess.exos.length}</div>
+        <div class="name-row">
+          <div class="name" id="name_${k}" data-k="${k}">${displayName}${ex.cardio?'<span class="cardio-tag">Cardio</span>':''}</div>
+          <button class="edit-btn" data-k="${k}" data-f="name" title="Modifier le nom">✎</button>
+        </div>
+        <div class="sets-row">
+          <div class="sets" id="sets_${k}" data-k="${k}">${displaySets}</div>
+          <button class="edit-btn" data-k="${k}" data-f="sets" title="Modifier les séries">✎</button>
+        </div>
+        <textarea class="note" placeholder="Charge, ressenti, ajustement…" data-k="${k}">${state.notes[k]||''}</textarea>
+      </div>`;
+  });
+  html+=`</div>`;
+  card.innerHTML=html;
+  app.appendChild(card);
+});
+document.querySelectorAll('.note').forEach(t=>{
+  t.addEventListener('input',()=>{state.notes[t.dataset.k]=t.value;save();});
+});
+
+/* ---------- Édition nom & séries d'exercice ---------- */
+function defaultEx(k){
+  const [si,ei]=k.split('_').map(Number);
+  return program[si].exos[ei];
+}
+document.querySelectorAll('.edit-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const k=btn.dataset.k;
+    const field=btn.dataset.f;           // 'name' ou 'sets'
+    const ex=defaultEx(k);
+    const el=document.getElementById(field+'_'+k);
+    if(el.querySelector('input'))return; // déjà en édition
+    const store=field==='name'?state.names:state.sets;
+    const orig=field==='name'?ex.n:ex.s;
+    const current=store[k]||orig;
+    const cls=field==='name'?'name-input':'sets-input';
+    el.innerHTML=`<input class="${cls}" type="text" value="${current.replace(/"/g,'&quot;')}">`;
+    const input=el.querySelector('input');
+    input.focus();input.select();
+    function commit(){
+      const v=input.value.trim();
+      if(v && v!==orig){store[k]=v;}else{delete store[k];}
+      save();
+      const val=store[k]||orig;
+      el.innerHTML=(field==='name')
+        ? val+(ex.cardio?'<span class="cardio-tag">Cardio</span>':'')
+        : val;
+    }
+    input.addEventListener('blur',commit);
+    input.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){input.blur();}
+      if(e.key==='Escape'){input.value=current;input.blur();}
+    });
+  });
+});
+
+refreshCal();
+
+/* ---------- Minuteur flottant 90 s ---------- */
+const REST=90;
+const timerEl=document.getElementById('timer');
+const timerBtn=document.getElementById('timerBtn');
+const timerStop=document.getElementById('timerStop');
+const timerVal=document.getElementById('timerVal');
+const timerLab=document.getElementById('timerLab');
+let tEnd=null,tInt=null;
+
+function beep(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    [0,.25,.5].forEach(d=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=880;o.type='sine';
+      g.gain.setValueAtTime(.001,ctx.currentTime+d);
+      g.gain.exponentialRampToValueAtTime(.4,ctx.currentTime+d+.02);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+d+.2);
+      o.start(ctx.currentTime+d);o.stop(ctx.currentTime+d+.22);
+    });
+  }catch(e){}
+  if(navigator.vibrate)navigator.vibrate([200,100,200,100,400]);
+}
+
+function startTimer(){
+  tEnd=Date.now()+REST*1000;
+  timerEl.classList.add('running');
+  timerEl.classList.remove('done');
+  timerLab.textContent='Relancer';
+  clearInterval(tInt);
+  tInt=setInterval(tick,200);
+  tick();
+}
+function stopTimer(finished){
+  clearInterval(tInt);tInt=null;tEnd=null;
+  timerEl.classList.remove('running');
+  timerBtn.style.setProperty('--p',0);
+  timerVal.textContent=REST+'s';
+  timerLab.textContent='Repos';
+  if(finished){
+    timerEl.classList.add('done');
+    beep();
+    setTimeout(()=>timerEl.classList.remove('done'),2200);
+  }
+}
+function tick(){
+  const left=Math.max(0,Math.ceil((tEnd-Date.now())/1000));
+  timerVal.textContent=left+'s';
+  timerBtn.style.setProperty('--p',(1-left/REST)*100);
+  if(left<=0)stopTimer(true);
+}
+timerBtn.addEventListener('click',startTimer); /* clic pendant le décompte = relance à 90 s */
+timerStop.addEventListener('click',()=>stopTimer(false));
+</script>
+
+
+<link rel="manifest" href="manifest.json">
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(e=>console.log("SW:",e));
+}
+</script>
+</body>
+</html>
